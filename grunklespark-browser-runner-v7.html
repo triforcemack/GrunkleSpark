@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>grunklespark browser runner v7</title>
+<style>
+:root {
+  --bg: #07020d;
+  --panel: rgba(16, 5, 28, .94);
+  --panel2: rgba(23, 10, 42, .92);
+  --grid: rgba(216, 180, 254, .09);
+  --line: rgba(216, 180, 254, .04);
+  --text: #f3e8ff;
+  --muted: #9b86ad;
+  --dim: #5b456c;
+  --spark: #d8b4fe;
+  --spark2: #a855f7;
+  --warn: #fb923c;
+  --danger: #f87171;
+  --key: #f0abfc;
+  --side: 300px;
+  --tap: 46px;
+  font-family: "Consolas", "Cascadia Mono", "Courier New", monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); overflow: hidden; }
+body {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(168, 85, 247, .24), transparent 30%),
+    linear-gradient(180deg, #07020d, #12051e);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,.018) 50%, rgba(0,0,0,.12) 50%),
+    linear-gradient(90deg, rgba(255,0,255,.018), rgba(168,85,247,.018), rgba(0,0,255,.012));
+  background-size: 100% 4px, 6px 100%;
+  opacity: .38;
+  z-index: 10;
+}
+.screen { display: none; height: 100%; }
+.screen.active { display: flex; }
+#connect {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login {
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  position: relative;
+  z-index: 2;
+  border: 1px solid rgba(216,180,254,.28);
+  background: rgba(10,3,18,.84);
+  box-shadow: 0 0 40px rgba(0,0,0,.5), inset 0 0 24px rgba(216,180,254,.06);
+  padding: 22px;
+}
+.logo { color: var(--spark); font-size: 24px; font-weight: 700; text-shadow: 0 0 12px rgba(216,180,254,.42); }
+.hint { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 10px 0 18px; }
+.field { display: grid; gap: 6px; margin-bottom: 12px; position: relative; z-index: 3; }
+label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+input, select, button {
+  font: inherit;
+  height: var(--tap);
+  border-radius: 3px;
+}
+input, select {
+  width: 100%;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+  border: 1px solid rgba(216,180,254,.25);
+  background: #12051e;
+  color: var(--text);
+  padding: 0 12px;
+  outline: none;
+}
+select {
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--spark) 50%) calc(100% - 18px) 20px / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--spark) 50%, transparent 50%) calc(100% - 12px) 20px / 6px 6px no-repeat,
+    #12051e;
+  padding-right: 36px;
+}
+input:focus, select:focus { border-color: var(--spark); box-shadow: 0 0 0 1px rgba(216,180,254,.2); }
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.dns-grid {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+.section-label {
+  color: var(--spark);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin: 16px 0 8px;
+}
+.custom-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: -4px;
+}
+.pulse-preview {
+  border: 1px solid rgba(216,180,254,.18);
+  background: rgba(0,0,0,.22);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+  padding: 10px 12px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.pulse-preview b { color: var(--spark); font-weight: 700; }
+button {
+  border: 1px solid rgba(216,180,254,.3);
+  background: var(--spark);
+  color: #12051e;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 14px;
+}
+#app { flex-direction: column; position: relative; }
+#app::before {
+  content: "01100111 01110011 00101110 01000010 01010010 01001111 01010111 01010011 01000101 01010010";
+  position: absolute;
+  inset: 48px 0 0;
+  color: rgba(216,180,254,.07);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: 14px;
+  word-break: break-all;
+  pointer-events: none;
+}
+.hdr {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(216,180,254,.24);
+  background: rgba(2,4,3,.96);
+  position: relative;
+  z-index: 2;
+}
+.brand { color: var(--spark); font-weight: 700; text-shadow: 0 0 10px rgba(216,180,254,.42); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--spark); box-shadow: 0 0 8px var(--spark2); }
+.tag {
+  border: 1px solid rgba(216,180,254,.2);
+  color: var(--muted);
+  background: rgba(0,0,0,.25);
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.tag.zone { color: var(--spark); }
+.spacer { flex: 1; }
+.main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side);
+  position: relative;
+  z-index: 1;
+}
+.terminal {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(216,180,254,.24);
+}
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+  background:
+    linear-gradient(180deg, rgba(4,10,5,.78), rgba(2,4,3,.92)),
+    repeating-linear-gradient(180deg, transparent 0, transparent 23px, var(--line) 24px);
+  box-shadow: inset 0 0 32px rgba(0,0,0,.65), inset 0 0 18px rgba(216,180,254,.06);
+}
+.msg {
+  position: relative;
+  padding: 5px 0 5px 18px;
+  border-left: 1px solid rgba(216,180,254,.14);
+  line-height: 1.55;
+  word-break: break-word;
+}
+.msg::before {
+  content: ">";
+  position: absolute;
+  left: 3px;
+  color: rgba(216,180,254,.78);
+  text-shadow: 0 0 8px rgba(216,180,254,.34);
+}
+.sys::before { content: "#"; color: var(--muted); text-shadow: none; }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.nick { color: var(--spark); text-shadow: 0 0 8px rgba(216,180,254,.28); }
+.time, .via { color: var(--dim); font-size: 11px; }
+.enc { color: var(--key); font-size: 11px; }
+.body { color: #f7edff; }
+.pending .body::after {
+  content: "_";
+  color: var(--spark);
+  animation: blink 900ms steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+.sys .body { color: var(--muted); font-style: italic; }
+.input {
+  height: 64px;
+  display: flex;
+  gap: 8px;
+  padding: 9px 12px;
+  border-top: 1px solid rgba(216,180,254,.2);
+  background: rgba(2,4,3,.96);
+}
+#chat { flex: 1; }
+.send { width: 52px; }
+.side {
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(3,9,5,.94), rgba(2,4,3,.98)),
+    repeating-linear-gradient(180deg, rgba(216,180,254,.032) 0, rgba(216,180,254,.032) 1px, transparent 1px, transparent 22px);
+  box-shadow: inset 1px 0 0 rgba(216,180,254,.1);
+}
+.side-title {
+  min-height: 42px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(216,180,254,.18);
+  color: var(--spark);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+#users { flex: 1; overflow-y: auto; min-height: 0; }
+.user {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(216,180,254,.12);
+}
+.user .name { color: var(--spark); font-size: 14px; }
+.user.self .name { color: #60a5fa; }
+.joined { color: var(--muted); font-size: 11px; margin-top: 4px; }
+.bar { height: 3px; margin-top: 8px; background: var(--dim); overflow: hidden; border-radius: 2px; }
+.fill { height: 100%; background: var(--spark); width: 0; }
+.debug-panel {
+  min-height: 220px;
+  max-height: 280px;
+  border-top: 1px solid rgba(216,180,254,.18);
+  display: flex;
+  flex-direction: column;
+}
+.debug-head {
+  min-height: 34px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--warn);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(216,180,254,.12);
+}
+#debug-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--muted);
+  background: rgba(0,0,0,.22);
+}
+.debug-row {
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(216,180,254,.08);
+  overflow-wrap: anywhere;
+}
+.debug-row:last-child { border-bottom: 0; }
+.debug-ok { color: var(--spark); }
+.debug-bad { color: var(--danger); }
+.foot {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(216,180,254,.18);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+@media (max-width: 760px) {
+  .main { grid-template-columns: 1fr; }
+  .side { display: none; }
+  .terminal { border-right: none; }
+  .tag.hide-sm { display: none; }
+  .field-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<section id="connect" class="screen active">
+  <div class="login">
+    <div class="logo">grunklespark</div>
+    <div class="hint">Browser-first silent runner with local-only chat state. Packet bits are tossed out as rotating DoH TXT queries.</div>
+    <div class="pulse-preview">
+      <b>boot pulse</b>
+      <span id="pulse-preview">generating...</span>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="username">username</label>
+        <input id="username" value="local-alpha" maxlength="32" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">password</label>
+        <input id="password" type="password" value="matrix" autocomplete="current-password">
+      </div>
+    </div>
+
+    <div class="section-label">DNS resolver selection</div>
+    <div class="dns-grid">
+      <div class="field">
+        <label for="dns-primary">primary DNS</label>
+        <select id="dns-primary">
+          <option value="google">Google Public DNS</option>
+          <option value="cloudflare">Cloudflare DNS</option>
+          <option value="quad9">Quad9 DNS</option>
+          <option value="custom">Custom DoH endpoint below</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="dns-secondary">secondary DNS</label>
+        <select id="dns-secondary">
+          <option value="cloudflare">Cloudflare DNS</option>
+          <option value="google">Google Public DNS</option>
+          <option value="quad9">Quad9 DNS</option>
+          <option value="custom">Custom DoH endpoint below</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="dns-tertiary">tertiary DNS</label>
+        <select id="dns-tertiary">
+          <option value="quad9">Quad9 DNS</option>
+          <option value="google">Google Public DNS</option>
+          <option value="cloudflare">Cloudflare DNS</option>
+          <option value="custom">Custom DoH endpoint below</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="custom-dns">custom DoH endpoint</label>
+      <input id="custom-dns" placeholder="optional DoH URL, e.g. https://dns.example.net/dns-query" autocomplete="off">
+      <div class="custom-note">Used when any resolver dropdown is set to custom. Full HTTPS DoH endpoint required.</div>
+    </div>
+    <button id="connect-btn">connect</button>
+  </div>
+</section>
+
+<section id="app" class="screen">
+  <div class="hdr">
+    <div class="brand">gs</div>
+    <div class="dot"></div>
+    <div class="tag zone" id="zone">browser.only</div>
+    <div class="tag hide-sm" id="mode">silent browser runner</div>
+    <div class="tag hide-sm" id="pulse-status">pulse idle</div>
+    <div class="spacer"></div>
+    <div class="tag" id="count">0/8</div>
+  </div>
+  <div class="main">
+    <main class="terminal">
+      <div id="messages"></div>
+      <div class="input">
+        <input id="chat" placeholder="say something..." maxlength="2000" autocomplete="off">
+        <button class="send" id="send">^</button>
+      </div>
+    </main>
+    <aside class="side">
+      <div class="side-title"><span>users</span><span id="side-count">0/8</span></div>
+      <div id="users"></div>
+      <div class="debug-panel">
+        <div class="debug-head"><span>debug</span><span id="debug-count">0</span></div>
+        <div id="debug-log"></div>
+      </div>
+      <div class="foot">
+        DNS pool shown: <span id="dns-summary">Google, Cloudflare, Quad9</span><br>
+        Pulse: <span id="pulse-summary">12ms slots, binary gated, DoH round-robin</span><br>
+        Chat state: localStorage only.<br>
+        Transport: send-only DoH TXT subdomain beacons.
+      </div>
+    </aside>
+  </div>
+</section>
+
+<script>
+const MAX_USERS = 8;
+const PULSE_SLOT_MS = 12;
+const PULSE_WINDOW_MS = 20000;
+const PULSE_SLOTS = Math.floor(PULSE_WINDOW_MS / PULSE_SLOT_MS);
+const PACKET_CHARS = 12;
+const MIN_PACKET_MOMENTS = Math.ceil(2000 / PACKET_CHARS) + 24;
+const TXT_QTYPE = 16;
+const IN_QCLASS = 1;
+const DEBUG_LIMIT = 120;
+const STORAGE_KEY = "grunklespark.v7.local";
+const RESOLVER_PRESETS = {
+  cloudflare: {
+    key: "cloudflare",
+    name: "Cloudflare DNS",
+    ip: "1.1.1.1",
+    doh: "https://cloudflare-dns.com/dns-query"
+  },
+  google: {
+    key: "google",
+    name: "Google Public DNS",
+    ip: "8.8.8.8",
+    doh: "https://dns.google/dns-query"
+  },
+  quad9: {
+    key: "quad9",
+    name: "Quad9 DNS",
+    ip: "9.9.9.9",
+    doh: "https://dns.quad9.net/dns-query"
+  }
+};
+
+function randomUnit() {
+  if (crypto?.getRandomValues) {
+    const v = new Uint32Array(1);
+    crypto.getRandomValues(v);
+    return v[0] / 0xffffffff;
+  }
+  return Math.random();
+}
+
+function randomPulseSequence() {
+  let bits = Array.from({ length: PULSE_SLOTS }, () => randomUnit() < 0.24 ? "1" : "0");
+  let ones = bits.filter(bit => bit === "1").length;
+  while (ones < MIN_PACKET_MOMENTS) {
+    const i = Math.floor(randomUnit() * bits.length);
+    if (bits[i] === "0") {
+      bits[i] = "1";
+      ones++;
+    }
+  }
+  return bits.join("");
+}
+
+const state = {
+  nick: "local-alpha",
+  room: "matrix",
+  dnsResolvers: [
+    RESOLVER_PRESETS.google,
+    RESOLVER_PRESETS.cloudflare,
+    RESOLVER_PRESETS.quad9
+  ],
+  id: Math.random().toString(16).slice(2),
+  users: new Map(),
+  connected: false,
+  pulseSequence: randomPulseSequence(),
+  pulseIndex: 0,
+  resolverIndex: 0,
+  pulseTimer: null,
+  announceTimer: null,
+  renderTimer: null,
+  outbox: [],
+  debug: []
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const zoneFor = room => {
+  let h = 2166136261;
+  for (const ch of room) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return (h >>> 0).toString(16).padStart(8, "0") + ".browser.gs";
+};
+const nowLabel = ts => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+$("pulse-preview").textContent = state.pulseSequence.slice(0, 96) + "...";
+
+function debugLog(kind, text) {
+  const row = { ts: Date.now(), kind, text };
+  state.debug.push(row);
+  if (state.debug.length > DEBUG_LIMIT) state.debug.shift();
+  if (!$("debug-log")) return;
+  $("debug-count").textContent = String(state.debug.length);
+  $("debug-log").innerHTML = state.debug.map(entry => {
+    const cls = entry.kind === "bad" ? "debug-bad" : "debug-ok";
+    return `<div class="debug-row ${cls}">[${nowLabel(entry.ts)}] ${esc(entry.text)}</div>`;
+  }).join("");
+  $("debug-log").scrollTop = $("debug-log").scrollHeight;
+}
+
+function toBase64Url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function utf8Bytes(text) {
+  return new TextEncoder().encode(text);
+}
+
+function roomHash(room) {
+  return zoneFor(room).replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 12);
+}
+
+function saveLocalSnapshot() {
+  const payload = {
+    room: state.room,
+    nick: state.nick,
+    lastSaved: Date.now(),
+    messages: [...document.querySelectorAll("#messages .msg")].map(node => ({
+      html: node.innerHTML,
+      sys: node.classList.contains("sys")
+    })).slice(-80)
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    debugLog("bad", `localStorage save ${String(error?.message || error)}`);
+  }
+}
+
+function restoreLocalSnapshot() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed.messages)) return;
+    $("messages").innerHTML = parsed.messages.map(entry => `<div class="msg${entry.sys ? " sys" : ""}">${entry.html}</div>`).join("");
+    $("messages").scrollTop = $("messages").scrollHeight;
+  } catch (error) {
+    debugLog("bad", `localStorage restore ${String(error?.message || error)}`);
+  }
+}
+
+function packetQueryName(packet) {
+  const payloadHex = bytesToHex(utf8Bytes(packet.payload)).slice(0, 40) || "00";
+  const msgLabel = packet.messageId.replace(/[^a-z0-9]/gi, "").toLowerCase().slice(-16) || "pkt";
+  return [
+    `gs${roomHash(state.room)}`,
+    `m${msgLabel}`,
+    `i${packet.index}`,
+    `t${packet.total}`,
+    `p${payloadHex}`,
+    "txt",
+    "invalid"
+  ].join(".");
+}
+
+function buildDnsQueryWire(name) {
+  const labels = name.split(".").filter(Boolean);
+  const qnameLength = labels.reduce((sum, label) => sum + 1 + label.length, 1);
+  const bytes = new Uint8Array(12 + qnameLength + 4);
+  const view = new DataView(bytes.buffer);
+  view.setUint16(0, Math.floor(randomUnit() * 65535));
+  view.setUint16(2, 0x0100);
+  view.setUint16(4, 1);
+  let offset = 12;
+  for (const label of labels) {
+    bytes[offset++] = label.length;
+    for (let i = 0; i < label.length; i++) bytes[offset++] = label.charCodeAt(i);
+  }
+  bytes[offset++] = 0;
+  view.setUint16(offset, TXT_QTYPE);
+  view.setUint16(offset + 2, IN_QCLASS);
+  return bytes;
+}
+
+function parseDnsResponseMeta(buffer) {
+  if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 12) {
+    return { ok: false, status: "short-response", answers: 0 };
+  }
+  const view = new DataView(buffer);
+  const flags = view.getUint16(2);
+  const rcode = flags & 0x000f;
+  const answers = view.getUint16(6);
+  return {
+    ok: rcode === 0,
+    status: rcode === 0 ? "ok" : `rcode-${rcode}`,
+    answers
+  };
+}
+
+function customResolverFromInput() {
+  const value = $("custom-dns").value.trim();
+  if (!value) return null;
+  let doh = value;
+  if (!/^https:\/\//i.test(doh)) {
+    doh = `https://${doh.replace(/\/+$/, "")}/dns-query`;
+  }
+  if (!/\/dns-query(?:\?|$)/i.test(doh)) {
+    doh = `${doh.replace(/\/+$/, "")}/dns-query`;
+  }
+  return {
+    key: "custom",
+    name: "Custom DoH",
+    ip: "custom",
+    doh
+  };
+}
+
+function readDnsChoice(id) {
+  const value = $(id).value;
+  if (value === "custom") return customResolverFromInput();
+  return RESOLVER_PRESETS[value] || null;
+}
+
+function selectedDnsResolvers() {
+  const seen = new Set();
+  const choices = ["dns-primary", "dns-secondary", "dns-tertiary"]
+    .map(readDnsChoice)
+    .filter(Boolean)
+    .filter(resolver => {
+      if (seen.has(resolver.doh)) return false;
+      seen.add(resolver.doh);
+      return true;
+    });
+  return choices.length ? choices : state.dnsResolvers;
+}
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
+}
+
+function renderSys(text) {
+  renderMessage({ nick: "system", text, ts: Date.now(), sys: true });
+}
+
+function renderMessage(message) {
+  const node = document.createElement("div");
+  node.className = "msg" + (message.sys ? " sys" : "");
+  node.innerHTML = `<div class="meta"><span class="nick">${esc(message.nick)}</span><span class="time">${nowLabel(message.ts)}</span>${message.sys ? "" : '<span class="enc">[enc]</span>'}</div><div class="body">${esc(message.text)}</div>${message.sys ? "" : `<div class="via">${esc(message.via || "localStorage + DoH send beacon")}</div>`}`;
+  $("messages").appendChild(node);
+  $("messages").scrollTop = $("messages").scrollHeight;
+  saveLocalSnapshot();
+}
+
+function queueMessage(text) {
+  const chunks = text.match(new RegExp(`[\\s\\S]{1,${PACKET_CHARS}}`, "g")) || [""];
+  const messageId = `${state.id}-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+  const ts = Date.now();
+  renderMessage({ nick: state.nick, text, ts, via: "queued for localStorage + DoH send" });
+  chunks.forEach((payload, index) => {
+    state.outbox.push({
+      messageId,
+      from: state.id,
+      nick: state.nick,
+      ts,
+      index,
+      total: chunks.length,
+      payload
+    });
+  });
+  updatePulseStatus();
+}
+
+function updatePulseStatus(bit = "-") {
+  if (!$("pulse-status")) return;
+  $("pulse-status").textContent = `pulse ${bit} q:${state.outbox.length}`;
+}
+
+async function sendDohPacket(packet, resolver) {
+  const qname = packetQueryName(packet);
+  const wire = buildDnsQueryWire(qname);
+  const dns = toBase64Url(wire);
+  const url = `${resolver.doh}?dns=${dns}`;
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "accept": "application/dns-message" },
+      cache: "no-store"
+    });
+    const body = await response.arrayBuffer();
+    const meta = parseDnsResponseMeta(body);
+    if (!response.ok) {
+      debugLog("bad", `${resolver.name} send http-${response.status} ${qname}`);
+      return;
+    }
+    if (!meta.ok) {
+      debugLog("bad", `${resolver.name} send ${meta.status} ${qname}`);
+      return;
+    }
+    debugLog("ok", `${resolver.name} send ${qname} answers:${meta.answers}`);
+  } catch (error) {
+    debugLog("bad", `${resolver.name} send ${String(error?.message || error)} ${qname}`);
+  }
+}
+
+async function pulseTick() {
+  const bit = state.pulseSequence[state.pulseIndex % state.pulseSequence.length];
+  state.pulseIndex++;
+  if (state.pulseIndex % 16 === 0) updatePulseStatus(bit);
+  if (bit !== "1" || !state.outbox.length) return;
+  const packet = state.outbox.shift();
+  const resolver = state.dnsResolvers[state.resolverIndex % state.dnsResolvers.length];
+  state.resolverIndex++;
+  if (resolver?.doh) {
+    sendDohPacket(packet, resolver);
+  }
+  updatePulseStatus(bit);
+}
+
+function startPulse() {
+  if (state.pulseTimer) return;
+  state.pulseTimer = setInterval(pulseTick, PULSE_SLOT_MS);
+  updatePulseStatus("start");
+}
+
+function announce() {
+  const user = { id: state.id, nick: state.nick, join: state.join, last: Date.now(), pct: 0 };
+  state.users.set(state.id, user);
+  renderUsers();
+}
+
+function renderUsers() {
+  const cutoff = Date.now() - 7000;
+  for (const [id, user] of state.users) {
+    if (user.last < cutoff) state.users.delete(id);
+  }
+  const users = [...state.users.values()].sort((a, b) => a.join - b.join).slice(0, MAX_USERS);
+  $("count").textContent = users.length + "/" + MAX_USERS;
+  $("side-count").textContent = users.length + "/" + MAX_USERS;
+  $("users").innerHTML = users.map(user => `<div class="user ${user.id === state.id ? "self" : ""}"><div class="name">${esc(user.nick)}${user.id === state.id ? " [you]" : ""}</div><div class="joined">joined ${nowLabel(user.join)}</div><div class="bar"><div class="fill" style="width:${user.pct || 0}%"></div></div></div>`).join("");
+}
+
+function connect() {
+  if (state.connected) return;
+  state.connected = true;
+  state.room = $("password").value.trim() || "matrix";
+  state.nick = ($("username").value.trim() || "anon").slice(0, 32);
+  state.dnsResolvers = selectedDnsResolvers();
+  state.join = Date.now();
+  $("zone").textContent = zoneFor(state.room);
+  $("dns-summary").textContent = state.dnsResolvers.map(resolver => resolver.name).join(", ");
+  $("mode").textContent = "dns: " + state.dnsResolvers.map(resolver => resolver.name).join(" / ");
+  show("app");
+  restoreLocalSnapshot();
+  renderSys("browser-only runner v7 active");
+  renderSys(`boot pulse ${state.pulseSequence.length} slots at ${PULSE_SLOT_MS}ms; ${[...state.pulseSequence].filter(bit => bit === "1").length} packet moments`);
+  renderSys("selected DoH: " + state.dnsResolvers.map(resolver => `${resolver.name} ${resolver.doh}`).join(" | "));
+  renderSys("chat storage is localStorage only; no receive path is active");
+  debugLog("ok", `connect room:${state.room} localStorage:${STORAGE_KEY}`);
+  announce();
+  startPulse();
+  if (!state.announceTimer) state.announceTimer = setInterval(announce, 2500);
+  if (!state.renderTimer) state.renderTimer = setInterval(renderUsers, 2500);
+}
+
+function sendChat() {
+  const input = $("chat");
+  const text = input.value.trim();
+  if (!text) return;
+  queueMessage(text);
+  input.value = "";
+}
+
+$("connect-btn").addEventListener("click", connect);
+$("password").addEventListener("keydown", event => { if (event.key === "Enter") connect(); });
+$("username").addEventListener("keydown", event => { if (event.key === "Enter") connect(); });
+$("custom-dns").addEventListener("keydown", event => { if (event.key === "Enter") connect(); });
+$("send").addEventListener("click", sendChat);
+$("chat").addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendChat();
+  }
+});
+</script>
+</body>
+</html>
