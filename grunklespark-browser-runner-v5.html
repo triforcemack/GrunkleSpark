@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>grunklespark browser runner</title>
+<style>
+:root {
+  --bg: #07020d;
+  --panel: rgba(16, 5, 28, .94);
+  --panel2: rgba(23, 10, 42, .92);
+  --grid: rgba(216, 180, 254, .09);
+  --line: rgba(216, 180, 254, .04);
+  --text: #f3e8ff;
+  --muted: #9b86ad;
+  --dim: #5b456c;
+  --spark: #d8b4fe;
+  --spark2: #a855f7;
+  --warn: #fb923c;
+  --danger: #f87171;
+  --key: #f0abfc;
+  --side: 300px;
+  --tap: 46px;
+  font-family: "Consolas", "Cascadia Mono", "Courier New", monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); overflow: hidden; }
+body {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(168, 85, 247, .24), transparent 30%),
+    linear-gradient(180deg, #07020d, #12051e);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,.018) 50%, rgba(0,0,0,.12) 50%),
+    linear-gradient(90deg, rgba(255,0,255,.018), rgba(168,85,247,.018), rgba(0,0,255,.012));
+  background-size: 100% 4px, 6px 100%;
+  opacity: .38;
+  z-index: 10;
+}
+.screen { display: none; height: 100%; }
+.screen.active { display: flex; }
+#connect {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login {
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  position: relative;
+  z-index: 2;
+  border: 1px solid rgba(216,180,254,.28);
+  background: rgba(10,3,18,.84);
+  box-shadow: 0 0 40px rgba(0,0,0,.5), inset 0 0 24px rgba(216,180,254,.06);
+  padding: 22px;
+}
+.logo { color: var(--spark); font-size: 24px; font-weight: 700; text-shadow: 0 0 12px rgba(216,180,254,.42); }
+.hint { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 10px 0 18px; }
+.field { display: grid; gap: 6px; margin-bottom: 12px; position: relative; z-index: 3; }
+label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+input, select, button {
+  font: inherit;
+  height: var(--tap);
+  border-radius: 3px;
+}
+input, select {
+  width: 100%;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+  border: 1px solid rgba(216,180,254,.25);
+  background: #12051e;
+  color: var(--text);
+  padding: 0 12px;
+  outline: none;
+}
+select {
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--spark) 50%) calc(100% - 18px) 20px / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--spark) 50%, transparent 50%) calc(100% - 12px) 20px / 6px 6px no-repeat,
+    #12051e;
+  padding-right: 36px;
+}
+input:focus, select:focus { border-color: var(--spark); box-shadow: 0 0 0 1px rgba(216,180,254,.2); }
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.dns-grid {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+.section-label {
+  color: var(--spark);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin: 16px 0 8px;
+}
+.custom-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: -4px;
+}
+.pulse-preview {
+  border: 1px solid rgba(216,180,254,.18);
+  background: rgba(0,0,0,.22);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+  padding: 10px 12px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.pulse-preview b { color: var(--spark); font-weight: 700; }
+button {
+  border: 1px solid rgba(216,180,254,.3);
+  background: var(--spark);
+  color: #12051e;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 14px;
+}
+#app { flex-direction: column; position: relative; }
+#app::before {
+  content: "01100111 01110011 00101110 01000010 01010010 01001111 01010111 01010011 01000101 01010010";
+  position: absolute;
+  inset: 48px 0 0;
+  color: rgba(216,180,254,.07);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: 14px;
+  word-break: break-all;
+  pointer-events: none;
+}
+.hdr {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(216,180,254,.24);
+  background: rgba(2,4,3,.96);
+  position: relative;
+  z-index: 2;
+}
+.brand { color: var(--spark); font-weight: 700; text-shadow: 0 0 10px rgba(216,180,254,.42); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--spark); box-shadow: 0 0 8px var(--spark2); }
+.tag {
+  border: 1px solid rgba(216,180,254,.2);
+  color: var(--muted);
+  background: rgba(0,0,0,.25);
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.tag.zone { color: var(--spark); }
+.spacer { flex: 1; }
+.main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side);
+  position: relative;
+  z-index: 1;
+}
+.terminal {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(216,180,254,.24);
+}
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+  background:
+    linear-gradient(180deg, rgba(4,10,5,.78), rgba(2,4,3,.92)),
+    repeating-linear-gradient(180deg, transparent 0, transparent 23px, var(--line) 24px);
+  box-shadow: inset 0 0 32px rgba(0,0,0,.65), inset 0 0 18px rgba(216,180,254,.06);
+}
+.msg {
+  position: relative;
+  padding: 5px 0 5px 18px;
+  border-left: 1px solid rgba(216,180,254,.14);
+  line-height: 1.55;
+  word-break: break-word;
+}
+.msg::before {
+  content: ">";
+  position: absolute;
+  left: 3px;
+  color: rgba(216,180,254,.78);
+  text-shadow: 0 0 8px rgba(216,180,254,.34);
+}
+.sys::before { content: "#"; color: var(--muted); text-shadow: none; }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.nick { color: var(--spark); text-shadow: 0 0 8px rgba(216,180,254,.28); }
+.time, .via { color: var(--dim); font-size: 11px; }
+.enc { color: var(--key); font-size: 11px; }
+.body { color: #f7edff; }
+.pending .body::after {
+  content: "_";
+  color: var(--spark);
+  animation: blink 900ms steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+.sys .body { color: var(--muted); font-style: italic; }
+.input {
+  height: 64px;
+  display: flex;
+  gap: 8px;
+  padding: 9px 12px;
+  border-top: 1px solid rgba(216,180,254,.2);
+  background: rgba(2,4,3,.96);
+}
+#chat { flex: 1; }
+.send { width: 52px; }
+.side {
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(3,9,5,.94), rgba(2,4,3,.98)),
+    repeating-linear-gradient(180deg, rgba(216,180,254,.032) 0, rgba(216,180,254,.032) 1px, transparent 1px, transparent 22px);
+  box-shadow: inset 1px 0 0 rgba(216,180,254,.1);
+}
+.side-title {
+  min-height: 42px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(216,180,254,.18);
+  color: var(--spark);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+#users { flex: 1; overflow-y: auto; }
+.user {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(216,180,254,.12);
+}
+.user .name { color: var(--spark); font-size: 14px; }
+.user.self .name { color: #60a5fa; }
+.joined { color: var(--muted); font-size: 11px; margin-top: 4px; }
+.bar { height: 3px; margin-top: 8px; background: var(--dim); overflow: hidden; border-radius: 2px; }
+.fill { height: 100%; background: var(--spark); width: 0; }
+.foot {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(216,180,254,.18);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+@media (max-width: 760px) {
+  .main { grid-template-columns: 1fr; }
+  .side { display: none; }
+  .terminal { border-right: none; }
+  .tag.hide-sm { display: none; }
+  .field-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<section id="connect" class="screen active">
+  <div class="login">
+    <div class="logo">grunklespark</div>
+    <div class="hint">Browser-only silent runner. No Python, no localhost server, no network. Same room id links tabs through BroadcastChannel when available.</div>
+    <div class="pulse-preview">
+      <b>boot pulse</b>
+      <span id="pulse-preview">generating...</span>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="username">username</label>
+        <input id="username" value="local-alpha" maxlength="32" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">password</label>
+        <input id="password" type="password" value="matrix" autocomplete="current-password">
+      </div>
+    </div>
+
+    <div class="section-label">DNS resolver selection</div>
+    <div class="dns-grid">
+      <div class="field">
+        <label for="dns-primary">primary DNS</label>
+        <select id="dns-primary">
+          <option value="8.8.8.8|Google Public DNS">Google Public DNS - 8.8.8.8</option>
+          <option value="1.1.1.1|Cloudflare DNS">Cloudflare DNS - 1.1.1.1</option>
+          <option value="9.9.9.9|Quad9 DNS">Quad9 DNS - 9.9.9.9</option>
+          <option value="208.67.222.222|OpenDNS">OpenDNS - 208.67.222.222</option>
+          <option value="64.6.64.6|Verisign DNS">Verisign DNS - 64.6.64.6</option>
+          <option value="custom|Custom DNS">Custom DNS from input below</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="dns-secondary">secondary DNS</label>
+        <select id="dns-secondary">
+          <option value="1.1.1.1|Cloudflare DNS">Cloudflare DNS - 1.1.1.1</option>
+          <option value="8.8.8.8|Google Public DNS">Google Public DNS - 8.8.8.8</option>
+          <option value="9.9.9.9|Quad9 DNS">Quad9 DNS - 9.9.9.9</option>
+          <option value="208.67.222.222|OpenDNS">OpenDNS - 208.67.222.222</option>
+          <option value="64.6.64.6|Verisign DNS">Verisign DNS - 64.6.64.6</option>
+          <option value="custom|Custom DNS">Custom DNS from input below</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="dns-tertiary">tertiary DNS</label>
+        <select id="dns-tertiary">
+          <option value="9.9.9.9|Quad9 DNS">Quad9 DNS - 9.9.9.9</option>
+          <option value="8.8.8.8|Google Public DNS">Google Public DNS - 8.8.8.8</option>
+          <option value="1.1.1.1|Cloudflare DNS">Cloudflare DNS - 1.1.1.1</option>
+          <option value="208.67.222.222|OpenDNS">OpenDNS - 208.67.222.222</option>
+          <option value="64.6.64.6|Verisign DNS">Verisign DNS - 64.6.64.6</option>
+          <option value="custom|Custom DNS">Custom DNS from input below</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="custom-dns">custom DNS input</label>
+      <input id="custom-dns" placeholder="optional resolver IP, e.g. 192.0.2.53" inputmode="decimal" autocomplete="off">
+      <div class="custom-note">Used when any resolver dropdown is set to custom.</div>
+    </div>
+    <button id="connect-btn">connect</button>
+  </div>
+</section>
+
+<section id="app" class="screen">
+  <div class="hdr">
+    <div class="brand">gs</div>
+    <div class="dot"></div>
+    <div class="tag zone" id="zone">browser.only</div>
+    <div class="tag hide-sm" id="mode">silent browser runner</div>
+    <div class="tag hide-sm" id="pulse-status">pulse idle</div>
+    <div class="spacer"></div>
+    <div class="tag" id="count">0/8</div>
+  </div>
+  <div class="main">
+    <main class="terminal">
+      <div id="messages"></div>
+      <div class="input">
+        <input id="chat" placeholder="say something..." maxlength="2000" autocomplete="off">
+        <button class="send" id="send">^</button>
+      </div>
+    </main>
+    <aside class="side">
+      <div class="side-title"><span>users</span><span id="side-count">0/8</span></div>
+      <div id="users"></div>
+      <div class="foot">
+        DNS pool shown: <span id="dns-summary">8.8.8.8, 1.1.1.1, 9.9.9.9</span><br>
+        Pulse: <span id="pulse-summary">12ms slots, binary gated</span><br>
+        Raw DNS probing requires the Python anchor.
+      </div>
+    </aside>
+  </div>
+</section>
+
+<script>
+const MAX_USERS = 8;
+const PULSE_SLOT_MS = 12;
+const PULSE_WINDOW_MS = 20000;
+const PULSE_SLOTS = Math.floor(PULSE_WINDOW_MS / PULSE_SLOT_MS);
+const PACKET_CHARS = 12;
+const MIN_PACKET_MOMENTS = Math.ceil(2000 / PACKET_CHARS) + 24;
+
+function randomUnit() {
+  if (crypto?.getRandomValues) {
+    const v = new Uint32Array(1);
+    crypto.getRandomValues(v);
+    return v[0] / 0xffffffff;
+  }
+  return Math.random();
+}
+
+function randomPulseSequence() {
+  let bits = Array.from({ length: PULSE_SLOTS }, () => randomUnit() < 0.24 ? "1" : "0");
+  let ones = bits.filter(bit => bit === "1").length;
+  while (ones < MIN_PACKET_MOMENTS) {
+    const i = Math.floor(randomUnit() * bits.length);
+    if (bits[i] === "0") {
+      bits[i] = "1";
+      ones++;
+    }
+  }
+  return bits.join("");
+}
+
+const state = {
+  nick: "local-alpha",
+  room: "matrix",
+  dnsResolvers: [
+    { ip: "8.8.8.8", name: "Google Public DNS" },
+    { ip: "1.1.1.1", name: "Cloudflare DNS" },
+    { ip: "9.9.9.9", name: "Quad9 DNS" }
+  ],
+  id: Math.random().toString(16).slice(2),
+  users: new Map(),
+  channel: null,
+  connected: false,
+  pulseSequence: randomPulseSequence(),
+  pulseIndex: 0,
+  pulseTimer: null,
+  outbox: [],
+  inbound: new Map()
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const zoneFor = room => {
+  let h = 2166136261;
+  for (const ch of room) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return (h >>> 0).toString(16).padStart(8, "0") + ".browser.gs";
+};
+const nowLabel = ts => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+$("pulse-preview").textContent = state.pulseSequence.slice(0, 96) + "...";
+
+function readDnsChoice(id) {
+  const value = $(id).value;
+  if (value.startsWith("custom|")) {
+    const custom = $("custom-dns").value.trim();
+    return custom ? { ip: custom, name: "Custom DNS" } : null;
+  }
+  const [ip, name] = value.split("|");
+  return { ip, name };
+}
+
+function selectedDnsResolvers() {
+  const seen = new Set();
+  const choices = ["dns-primary", "dns-secondary", "dns-tertiary"]
+    .map(readDnsChoice)
+    .filter(Boolean)
+    .filter(r => {
+      if (seen.has(r.ip)) return false;
+      seen.add(r.ip);
+      return true;
+    });
+  return choices.length ? choices : state.dnsResolvers;
+}
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
+}
+
+function renderSys(text) {
+  renderMessage({ nick: "system", text, ts: Date.now(), sys: true });
+}
+
+function renderMessage(m) {
+  const d = document.createElement("div");
+  d.className = "msg" + (m.sys ? " sys" : "");
+  d.innerHTML = `<div class="meta"><span class="nick">${esc(m.nick)}</span><span class="time">${nowLabel(m.ts)}</span>${m.sys ? "" : '<span class="enc">[enc]</span>'}</div><div class="body">${esc(m.text)}</div>${m.sys ? "" : '<div class="via">via local browser channel</div>'}`;
+  $("messages").appendChild(d);
+  $("messages").scrollTop = $("messages").scrollHeight;
+}
+
+function receivePacket(packet) {
+  let entry = state.inbound.get(packet.messageId);
+  if (!entry) {
+    const node = document.createElement("div");
+    node.className = "msg pending";
+    node.innerHTML = `<div class="meta"><span class="nick">${esc(packet.nick)}</span><span class="time">${nowLabel(packet.ts)}</span><span class="enc">[pulse]</span></div><div class="body"></div><div class="via">receiving packet stream</div>`;
+    $("messages").appendChild(node);
+    entry = {
+      chunks: Array(packet.total).fill(""),
+      received: 0,
+      started: Date.now(),
+      node,
+      body: node.querySelector(".body"),
+      via: node.querySelector(".via")
+    };
+    state.inbound.set(packet.messageId, entry);
+  }
+  if (!entry.chunks[packet.index]) {
+    entry.received++;
+  }
+  entry.chunks[packet.index] = packet.payload;
+  entry.body.textContent = entry.chunks.join("");
+  entry.via.textContent = `packets ${entry.received}/${packet.total} at 12ms binary pulse`;
+  if (entry.received >= packet.total) {
+    entry.node.classList.remove("pending");
+    entry.via.textContent = `delivered in ${Date.now() - entry.started}ms through ${packet.total} packets`;
+    state.inbound.delete(packet.messageId);
+  }
+  $("messages").scrollTop = $("messages").scrollHeight;
+}
+
+function queueMessage(text) {
+  const chunks = text.match(new RegExp(`[\\s\\S]{1,${PACKET_CHARS}}`, "g")) || [""];
+  const messageId = `${state.id}-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+  const ts = Date.now();
+  chunks.forEach((payload, index) => {
+    state.outbox.push({
+      messageId,
+      from: state.id,
+      nick: state.nick,
+      ts,
+      index,
+      total: chunks.length,
+      payload
+    });
+  });
+  updatePulseStatus();
+}
+
+function updatePulseStatus(bit = "-") {
+  if (!$("pulse-status")) return;
+  $("pulse-status").textContent = `pulse ${bit} q:${state.outbox.length}`;
+}
+
+function pulseTick() {
+  const bit = state.pulseSequence[state.pulseIndex % state.pulseSequence.length];
+  state.pulseIndex++;
+  if (state.pulseIndex % 16 === 0) updatePulseStatus(bit);
+  if (bit !== "1" || !state.outbox.length) return;
+  const packet = state.outbox.shift();
+  receivePacket(packet);
+  state.channel?.postMessage({ type: "packet", packet });
+  updatePulseStatus(bit);
+}
+
+function startPulse() {
+  if (state.pulseTimer) return;
+  state.pulseTimer = setInterval(pulseTick, PULSE_SLOT_MS);
+  updatePulseStatus("start");
+}
+
+function announce() {
+  const u = { id: state.id, nick: state.nick, join: state.join, last: Date.now(), pct: 0 };
+  state.users.set(state.id, u);
+  state.channel?.postMessage({ type: "presence", user: u });
+  renderUsers();
+}
+
+function renderUsers() {
+  const cutoff = Date.now() - 7000;
+  for (const [id, user] of state.users) {
+    if (user.last < cutoff) state.users.delete(id);
+  }
+  const users = [...state.users.values()].sort((a, b) => a.join - b.join).slice(0, MAX_USERS);
+  $("count").textContent = users.length + "/" + MAX_USERS;
+  $("side-count").textContent = users.length + "/" + MAX_USERS;
+  $("users").innerHTML = users.map(u => `<div class="user ${u.id === state.id ? "self" : ""}"><div class="name">${esc(u.nick)}${u.id === state.id ? " [you]" : ""}</div><div class="joined">joined ${nowLabel(u.join)}</div><div class="bar"><div class="fill" style="width:${u.pct || 0}%"></div></div></div>`).join("");
+}
+
+function connect() {
+  if (state.connected) return;
+  state.connected = true;
+  state.room = $("password").value.trim() || "matrix";
+  state.nick = ($("username").value.trim() || "anon").slice(0, 32);
+  state.dnsResolvers = selectedDnsResolvers();
+  state.join = Date.now();
+  $("zone").textContent = zoneFor(state.room);
+  $("dns-summary").textContent = state.dnsResolvers.map(r => r.ip).join(", ");
+  $("mode").textContent = "dns: " + state.dnsResolvers.map(r => r.name).join(" / ");
+  if ("BroadcastChannel" in window) {
+    state.channel = new BroadcastChannel("grunklespark:" + state.room);
+    state.channel.onmessage = event => {
+      const msg = event.data || {};
+      if (msg.type === "presence" && msg.user?.id !== state.id) {
+        msg.user.last = Date.now();
+        state.users.set(msg.user.id, msg.user);
+        renderUsers();
+      }
+      if (msg.type === "packet" && msg.packet?.from !== state.id) receivePacket(msg.packet);
+      if (msg.type === "chat" && msg.from !== state.id) renderMessage(msg.message);
+    };
+  }
+  show("app");
+  renderSys("browser-only runner active");
+  renderSys(`boot pulse ${state.pulseSequence.length} slots at ${PULSE_SLOT_MS}ms; ${[...state.pulseSequence].filter(bit => bit === "1").length} packet moments`);
+  renderSys("selected DNS: " + state.dnsResolvers.map(r => `${r.name} ${r.ip}`).join(" | "));
+  renderSys("open this same file in another tab with the same room password to test local multi-instance presence");
+  announce();
+  startPulse();
+  setInterval(announce, 2500);
+  setInterval(renderUsers, 2500);
+}
+
+function sendChat() {
+  const input = $("chat");
+  const text = input.value.trim();
+  if (!text) return;
+  queueMessage(text);
+  input.value = "";
+}
+
+$("connect-btn").addEventListener("click", connect);
+$("password").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
+$("username").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
+$("custom-dns").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
+$("send").addEventListener("click", sendChat);
+$("chat").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+</script>
+</body>
+</html>
